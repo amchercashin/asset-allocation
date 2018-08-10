@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Портфель лежебоки</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- <link rel="stylesheet" type="text/css" media="screen" href="main.css" /> -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-finance-1.39.4.min.js"></script>
+    <script src="dataFetch.js" defer></script>
+    <script src="storeData.js" defer></script>
+    <script src="makePlot.js" defer></script>
+    <script src="main.js" defer></script>
+    <script src="makePortfolio.js" defer></script>
+</head>
+<body>
+    <h3>Портфель лежебоки, портфель простака</h3>
+    <p>Это стратегия инвестирования на фондовом рынке. Вы распределяете свой капитал поровну между разными группами активов: акциями, облигациями (можно еще добавить золото). Забываете о нем на какой-то условленный срок: например год-полтора. По прошествии этого срока возвращаетесь и производите ребалансировку: что-то продаете, а что-то покупаете так, что бы восстановить изначальный баланс между разными группами активов. И далее продолжаете в том же духе, пока не надоест.</p>
+    <p>Считается, что такая стратегия в среднем (т.е. если делать это достаточно долго) принесет вам доход больший, чем инвестирование в любую группу актвивов по отдельности. Почему? Суть в том что эта стратегия вынуждает вас продавать то что выросло в цене и покупать то что упало.</p>
+    <p>Проверим это на практике? Перед вами графики индексов Московской бирж. Данные были получены непосредственно с их сайта (по API) вашим браузером пока вы читали этот текст. Сейчас мы будем рассматривать портфель, состоящий только из двух групп активов: акций и облигаций.</p>
+    <p>В качестве акций у нас выступает индекс RTSSTDTRR. Это индекс полной (т.е. с учетом дивидендов) доходности голубых фишек (т.е. 15 крупнейших компаний). Он бдует моделировать ситуацию покупки акции этих компаний в тех же долях, в каких они входят в индекс (это называется вложить в индекс). Выбрать 15 крупнейших компаний - разумный выбор для портфеля лежебоки: не слишком много + стаблильные. Я бы выбрал 10, но такого индекса нет.</p>
+    <p></p>
+    <div id="graphDiv"><!-- Plotly chart will be drawn inside this DIV --></div>
+    <!-- <fieldset>
+            <legend>Выберите что показывать</legend>
+        
+            <span>
+                <input type="checkbox" id="scales" name="feature"
+                       value="scales" checked />
+                <label for="scales">Scales</label>
+            </span>
+        
+            <span>
+                <input type="checkbox" id="horns" name="feature"
+                       value="horns" />
+                <label for="horns">Horns</label>
+            </span>
+        
+            <span>
+                <input type="checkbox" id="claws" name="feature"
+                       value="claws" />
+                <label for="claws">Claws</label>
+            </span>
+        
+        </fieldset> -->
+</body>
+</html>
