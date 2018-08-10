@@ -1,5 +1,5 @@
 async function getLastRecord(indexID, startDade) {
-    const response = await axios.get("http://iss.moex.com/iss/history/engines/stock/markets/index/securities/" + indexID + ".json?limit=1&from=" + startDade);
+    const response = await axios.get("https://iss.moex.com/iss/history/engines/stock/markets/index/securities/" + indexID + ".json?limit=1&from=" + startDade);
     const lastRecord = response.data["history.cursor"]["data"][0][1];
     return lastRecord;
 }
@@ -9,7 +9,7 @@ async function getDataAsync(indexID, startDade = "2010-12-30") {
     let promises = [];
     let data = [];
         for (let i = 0; i < lastRecord; i += 100) {
-            promises.push(axios.get("http://iss.moex.com/iss/history/engines/stock/markets/index/securities/" + indexID + ".json?start=" + i + "&from=" + startDade));
+            promises.push(axios.get("https://iss.moex.com/iss/history/engines/stock/markets/index/securities/" + indexID + ".json?start=" + i + "&from=" + startDade));
         }
     const results = await Promise.all(promises);
     data = results.reduce((acc, val) => acc.concat(val.data.history.data), []);
