@@ -1,3 +1,8 @@
+
+// plot.on('plotly_click', function(){
+//     alert('You clicked this Plotly chart!');
+// });
+
 plot.on('plotly_click', function(data){
     let pts = '';
     for(let i=0; i < data.points.length; i++){
@@ -10,7 +15,7 @@ plot.on('plotly_click', function(data){
           y: parseFloat(data.points[i].y.toPrecision(4))
         }
 
-        annotations = self.layout.annotations || [];
+        annotations = [];
         annotations.push(annotation);
         Plotly.relayout(plot,{annotations: annotations})
     }

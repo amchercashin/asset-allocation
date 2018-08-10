@@ -6,11 +6,12 @@ addBlankPlot(plot);
 
 addTracesToPlot(plot, indices);
 
+plot.layout = {
+    hovermode:'closest',
+    title:'Click on Points to add an Annotation on it'
+ };
+
 
 window.onresize = function() {
     Plotly.Plots.resize(plot);
 };
-
-plot.on('plotly_click', function(){
-    alert('You clicked this Plotly chart!');
-});
