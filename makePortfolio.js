@@ -17,6 +17,7 @@ function showModel(form) {
     modelTrace.type = "scatter";
     modelTrace.name = "Модельный портфель А:" + sharesPart.toString() + " О:" + ((100-sharesPart*100)/100).toString() + " Р:" + rebalancePeriod.toString();
     Plotly.addTraces(plot, modelTrace);
+    // Plotly.relayout(plot, {showlegend: true, legend: {"orientation": "h", x: 0.5, y: -0.1}})
     return false;
 }
 

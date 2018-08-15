@@ -1,5 +1,5 @@
 function addBlankPlot(plotDiv) {
-    Plotly.newPlot(plotDiv, []);
+    Plotly.newPlot(plotDiv, [], {showlegend: true, legend: {"orientation": "h"}});
 }
 
 async function addTracesToPlot (plot, indices, startDate) {
@@ -8,6 +8,7 @@ async function addTracesToPlot (plot, indices, startDate) {
         Plotly.addTraces(plot, trace);
         console.log("Add trace: " + index);
     }
+    Plotly.relayout(plot, {showlegend: true, legend: {"orientation": "h", x: 0.5, y: -0.1}})
 }
 
 async function makeTrace(index, startDate) {
