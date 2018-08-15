@@ -1,6 +1,6 @@
 function updateSliderLables() {
-    document.getElementById("RTSSTDTRR-share").innerText = parseInt(100 - this.value);
-    document.getElementById("RUGBITR5+-share").innerText = this.value;
+    document.getElementById("MCFTRR-share").innerText = parseInt(100 - this.value);
+    document.getElementById("RGBITR-share").innerText = this.value;
 }
 
 

@@ -8,28 +8,32 @@ function showModel(form) {
     let modelTrace = {};
     const startDate = form.elements.namedItem("start-date").value; //redo to findClosest date
     const rebalancePeriod = form.elements.namedItem("rebalance-period").value;
-    const RTSSTDTRRshare =  parseInt(100 - form.elements.namedItem("balance-slider").value) / 100;
+    const sharesPart =  parseInt(100 - form.elements.namedItem("balance-slider").value) / 100;
     
-    model = makeModel(startDate, rebalancePeriod, RTSSTDTRRshare);
+    model = makeModel(startDate, rebalancePeriod, sharesPart);
     activeModel = model;
     modelTrace.x = model.x;
     modelTrace.y = model.y;
     modelTrace.type = "scatter";
-    modelTrace.name = "Модельный портфель";
+    modelTrace.name = "Модельный портфель А:" + sharesPart.toString() + " О:" + ((100-sharesPart*100)/100).toString() + " Р:" + rebalancePeriod.toString();
     Plotly.addTraces(plot, modelTrace);
     return false;
 }
 
-function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, RTSSTDTRRshare = 0.5) {
-    const RUGBITR5Pshare = 1 - RTSSTDTRRshare;
-    const data = plot.data;
+function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart = 0.5) {
+    const RUGBITR5Pshare = 1 - sharesPart;
+    const data = Object.assign({}, plot.data);
+    for (trace in data) {
+        // console.log(trace);
+        data[trace] = expandTimeseries(data[trace]);
+    }
     const model = {
         x: new Array(),
         shareValue: new Array(),
         bondValue: new Array(),
         y: new Array()
     };
-    const startIndex = plot.data[0].x.indexOf(startDate);
+    const startIndex = data[0].x.indexOf(startDate);
     let nextRebalanceDate = moment(startDate, "YYYY-MM-DD").add(rebalancePeriod, "d");
     let j = 0;
     for(let i = startIndex; i < data[0].x.length; i++) {
@@ -39,24 +43,32 @@ function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, RTSSTDTRRsha
         let currentDate = data[0].x[i];
         // console.log(nextRebalanceDate)
         model.x.push(currentDate);
-        
+        if (currentDate === nextRebalanceDate.format("YYYY-MM-DD") && !data[0].marketDay[i]) {
+            for (let d = i; d < data[0].x.length; d++) {
+                if (data[0].marketDay[d]) {
+                    nextRebalanceDate = moment(data[0].x[d], "YYYY-MM-DD");
+                    break;
+                }
+            }
+            console.log("Shifting rebalance day: " + currentDate + "\nto next market day: " + nextRebalanceDate.format("YYYY-MM-DD"))
+        }
         if (i === startIndex) {
             // INITIAL BALANCE
-            combinedValue = (plot.data[0].y[i] + plot.data[1].y[i]) / 2;
-            shareValue = combinedValue * RTSSTDTRRshare;
+            combinedValue = (data[0].y[i] + data[1].y[i]) / 2;
+            shareValue = combinedValue * sharesPart;
             bondValue = combinedValue * RUGBITR5Pshare;
             console.log("Initial balance:" + model.x[model.x.length-1]);
-        } else if (moment(currentDate, "YYYY-MM-DD") >= nextRebalanceDate && moment(data[0].x[i-1], "YYYY-MM-DD") < nextRebalanceDate) {
+        } else if (currentDate === nextRebalanceDate.format("YYYY-MM-DD")) {
             // REBALANCE
-            combinedValue = plot.data[0].y[i] / plot.data[0].y[i-1] * model.shareValue[j-1] + plot.data[1].y[i] / plot.data[1].y[i-1] * model.bondValue[j-1];
-            shareValue = combinedValue * RTSSTDTRRshare;
+            combinedValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[j-1] + data[1].y[i] / data[1].y[i-1] * model.bondValue[j-1];
+            shareValue = combinedValue * sharesPart;
             bondValue = combinedValue * RUGBITR5Pshare;
             nextRebalanceDate = moment(currentDate, "YYYY-MM-DD").add(rebalancePeriod, "d")
             console.log("rebalance:" + model.x[model.x.length-1]);
         } else {
             // REGULAR
-            shareValue = plot.data[0].y[i] / plot.data[0].y[i-1] * model.shareValue[j-1];
-            bondValue = plot.data[1].y[i] / plot.data[1].y[i-1] * model.bondValue[j-1];
+            shareValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[j-1];
+            bondValue = data[1].y[i] / data[1].y[i-1] * model.bondValue[j-1];
             combinedValue = shareValue + bondValue;
         }
 
