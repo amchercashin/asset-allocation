@@ -5,7 +5,7 @@ async function getLastRecord(indexID, startDate = "2003-02-26", engine = "stock"
 }
 
 async function getDataAsync(indexID, startDate = "2003-02-26", engine = "stock") {
-    const lastRecord = await getLastRecord(indexID, startDate);
+    const lastRecord = await getLastRecord(indexID, startDate, engine);
     let promises = [];
     let data = [];
         for (let i = 0; i < lastRecord; i += 100) {
@@ -17,39 +17,7 @@ async function getDataAsync(indexID, startDate = "2003-02-26", engine = "stock")
     return(data);    
 }
 
-async function extract(data, dateCol = 2, valueCol = 5) {
-    return { x: data.map(row => row[dateCol]), 
-             y: data.map(row => row[valueCol]) 
-            }
-}
 
-async function normalize(arr) {
-    return arr.map((el, i, arr) => el / arr[0])
-}
-
-function expandTimeseries(data) {
-    const startDate = data.x[0];
-    const endDate = data.x[data.x.length - 1];
-    newX = [];
-    newY = [];
-    marketDay = [];
-    days = moment.duration(moment(endDate).diff(moment(startDate))).as("days");
-    let dayName;
-    let index;
-    for (let day = 0; day <= days; day++) {
-        dayName = moment(startDate, "YYYY-MM-DD").add(day, "d").format("YYYY-MM-DD");
-        newX.push(dayName);
-        index = data.x.indexOf(dayName);
-        if (index !== -1) {
-            newY.push(data.y[index]);
-            marketDay.push(true);
-        } else {
-            newY.push(newY[day - 1]);
-            marketDay.push(false);
-        }
-    }
-    return {x: newX, y: newY, marketDay: marketDay}
-}
 
 // function getDateRange(startDate, endDate) {
 //     dateRange = [];

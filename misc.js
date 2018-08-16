@@ -3,13 +3,36 @@ function updateSliderLables() {
     document.getElementById("RGBITR-share").innerText = this.value;
 }
 
+async function extract(data, dateCol = 2, valueCol = 5) {
+    return { x: data.map(row => row[dateCol]), 
+             y: data.map(row => row[valueCol]) 
+            }
+}
 
-// a and b are javascript Date objects
-// function dateDiffInDays(a, b) {
-//     const _MS_PER_DAY = 1000 * 60 * 60 * 24;
-//     // Discard the time and time-zone information.
-//     const utc1 = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
-//     const utc2 = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+function normalize(arr, normPoint = 0) {
+    return arr.map((el, i, arr) => el / arr[normPoint])
+}
 
-//     return Math.floor((utc2 - utc1) / _MS_PER_DAY);
-// }
+function expandTimeseries(data) {
+    const startDate = data.x[0];
+    const endDate = data.x[data.x.length - 1];
+    newX = [];
+    newY = [];
+    marketDay = [];
+    days = moment.duration(moment(endDate).diff(moment(startDate))).as("days");
+    let dayName;
+    let index;
+    for (let day = 0; day <= days; day++) {
+        dayName = moment(startDate, "YYYY-MM-DD").add(day, "d").format("YYYY-MM-DD");
+        newX.push(dayName);
+        index = data.x.indexOf(dayName);
+        if (index !== -1) {
+            newY.push(data.y[index]);
+            marketDay.push(true);
+        } else {
+            newY.push(newY[day - 1]);
+            marketDay.push(false);
+        }
+    }
+    return {x: newX, y: newY, marketDay: marketDay}
+}

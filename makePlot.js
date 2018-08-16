@@ -28,7 +28,7 @@ async function makeTrace(index, startDate) {
             trace = await extract(await getDataAsync(index, startDate, "stock"));
             trace.y = await normalize(trace.y);
         }
-        // trace = expandTimeseries(trace);      
+        trace = expandTimeseries(trace);      
         maybeStore(index, trace);
     }
     trace.type = "scatter";

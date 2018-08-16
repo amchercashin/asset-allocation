@@ -6,27 +6,38 @@ plot.on('plotly_click', function(data){
 
 function showModel(form) {
     let modelTrace = {};
-    const startDate = form.elements.namedItem("start-date").value; //redo to findClosest date
+    const newStartDate = form.elements.namedItem("start-date").value; //redo to findClosest date
     const rebalancePeriod = form.elements.namedItem("rebalance-period").value;
     const sharesPart =  parseInt(100 - form.elements.namedItem("balance-slider").value) / 100;
-    
-    model = makeModel(startDate, rebalancePeriod, sharesPart);
+    if (newStartDate != startDate) {
+        let deleteIndicies = [];
+        for (trace in plot.data) {
+            if (trace > 1) {
+                deleteIndicies.push(parseInt(trace));
+            }
+        }
+        Plotly.deleteTraces(plot, deleteIndicies);
+    }
+    model = makeModel(newStartDate, rebalancePeriod, sharesPart);
     activeModel = model;
     modelTrace.x = model.x;
     modelTrace.y = model.y;
     modelTrace.type = "scatter";
     modelTrace.name = "Модельный портфель А:" + sharesPart.toString() + " О:" + ((100-sharesPart*100)/100).toString() + " Р:" + rebalancePeriod.toString();
     Plotly.addTraces(plot, modelTrace);
+    startDate = newStartDate;
     // Plotly.relayout(plot, {showlegend: true, legend: {"orientation": "h", x: 0.5, y: -0.1}})
     return false;
 }
 
 function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart = 0.5) {
     const RUGBITR5Pshare = 1 - sharesPart;
-    const data = Object.assign({}, plot.data);
+    const data = plot.data;
+    const startIndex = data[0].x.indexOf(startDate);
     for (trace in data) {
-        // console.log(trace);
-        data[trace] = expandTimeseries(data[trace]);
+        if (trace < 2) {
+            data[trace].y = normalize(data[trace].y, startIndex);
+        }
     }
     const model = {
         x: new Array(),
@@ -34,7 +45,7 @@ function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart =
         bondValue: new Array(),
         y: new Array()
     };
-    const startIndex = data[0].x.indexOf(startDate);
+    
     let nextRebalanceDate = moment(startDate, "YYYY-MM-DD").add(rebalancePeriod, "d");
     let j = 0;
     for(let i = startIndex; i < data[0].x.length; i++) {
