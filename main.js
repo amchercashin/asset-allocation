@@ -34,7 +34,7 @@ addBlankPlot(plot);
 })()
 
 plot.layout = {
-    hovermode:'closest',
+    hovermode:'x',
     margin: {
         t: 10, //top margin
         l: 20, //left margin
