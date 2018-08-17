@@ -35,7 +35,12 @@ addBlankPlot(plot);
 
 plot.layout = {
     hovermode:'closest',
-    title:'Укажите начало инвестирования кликом или введите ниже'
+    margin: {
+        t: 10, //top margin
+        l: 20, //left margin
+        r: 20, //right margin
+        b: 10 //bottom margin
+        }
  };
 
 

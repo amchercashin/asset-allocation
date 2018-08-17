@@ -25,6 +25,8 @@ function showModel(form) {
     modelTrace.type = "scatter";
     modelTrace.name = "Портфель А:" + sharesPart.toString() + " О:" + ((100-sharesPart*100)/100).toString() + " Р:" + rebalancePeriod.toString();
     Plotly.addTraces(plot, modelTrace);
+    // Plotly.addTraces(plot, rebalances);
+    // rebalances = [];
     startDate = newStartDate;
     // Plotly.relayout(plot, {showlegend: true, legend: {"orientation": "h", x: 0.5, y: -0.1}})
     return false;
@@ -76,6 +78,7 @@ function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart =
             shareValue = combinedValue * sharesPart;
             bondValue = combinedValue * RUGBITR5Pshare;
             nextRebalanceDate = moment(currentDate, "YYYY-MM-DD").add(rebalancePeriod, "d")
+            // rebalances.push({x: [currentDate, currentDate], y: [1.1, combinedValue], line: {color: lineColors[plot.data.length], dash: "dash"}, showlegend: false});
             console.log("rebalance:" + model.x[model.x.length-1]);
         } else {
             // REGULAR
@@ -92,6 +95,21 @@ function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart =
     }
     return model;
 }
+
+// let rebalances = [];
+
+// const lineColors = [
+//     '#1f77b4',  // muted blue
+//     '#ff7f0e',  // safety orange
+//     '#2ca02c',  // cooked asparagus green
+//     '#d62728',  // brick red
+//     '#9467bd',  // muted purple
+//     '#8c564b',  // chestnut brown
+//     '#e377c2',  // raspberry yogurt pink
+//     '#7f7f7f',  // middle gray
+//     '#bcbd22',  // curry yellow-green
+//     '#17becf'   // blue-teal
+// ];
 
 
 // plot.on('plotly_click', function(data){
