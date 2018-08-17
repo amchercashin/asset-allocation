@@ -34,6 +34,8 @@ addBlankPlot(plot);
 })()
 
 plot.layout = {
+    showlegend: true, 
+    legend: {"orientation": "h", x: 0.5, y: -0.1},
     hovermode:'x',
     margin: {
         t: 10, //top margin
