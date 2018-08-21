@@ -49,7 +49,7 @@ function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart =
     };
     
     let nextRebalanceDate = moment(startDate, "YYYY-MM-DD").add(rebalancePeriod, "d");
-    let j = 0;
+    // let j = 0;
     for(let i = startIndex; i < data[0].x.length; i++) {
         let shareValue;
         let bondValue;
@@ -74,7 +74,7 @@ function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart =
             console.log("Initial balance:" + model.x[model.x.length-1]);
         } else if (currentDate === nextRebalanceDate.format("YYYY-MM-DD")) {
             // REBALANCE
-            combinedValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[j-1] + data[1].y[i] / data[1].y[i-1] * model.bondValue[j-1];
+            combinedValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[i-1] + data[1].y[i] / data[1].y[i-1] * model.bondValue[i-1];
             shareValue = combinedValue * sharesPart;
             bondValue = combinedValue * RUGBITR5Pshare;
             nextRebalanceDate = moment(currentDate, "YYYY-MM-DD").add(rebalancePeriod, "d")
@@ -82,8 +82,8 @@ function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart =
             console.log("rebalance:" + model.x[model.x.length-1]);
         } else {
             // REGULAR
-            shareValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[j-1];
-            bondValue = data[1].y[i] / data[1].y[i-1] * model.bondValue[j-1];
+            shareValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[i-1];
+            bondValue = data[1].y[i] / data[1].y[i-1] * model.bondValue[i-1];
             combinedValue = shareValue + bondValue;
         }
 
@@ -91,7 +91,7 @@ function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart =
         model.shareValue.push(shareValue);
         model.bondValue.push(bondValue);
         model.y.push(combinedValue);
-        j++;
+        // j++;
     }
     return model;
 }
