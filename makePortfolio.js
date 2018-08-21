@@ -27,8 +27,10 @@ function showModel(form) {
     modelTrace.line = {};
     modelTrace.line.color = colors[colorInd];
     modelTrace.name = "Портфель А:" + sharesPart.toString() + " О:" + ((100-sharesPart*100)/100).toString() + " Р:" + rebalancePeriod.toString();
+    modelTrace.legendgroup = modelTrace.name;
     Plotly.addTraces(plot, modelTrace);
     Plotly.addTraces(plot, {x: activeModel.rebalanceX, y: activeModel.rebalanceY, type: 'scatter', mode: 'markers', showlegend: false, hoverinfo: "skip",
+        legendgroup: modelTrace.name,
         marker: {
             color: "white",
             size: 9,
