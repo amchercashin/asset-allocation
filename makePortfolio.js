@@ -8,6 +8,7 @@ function showModel(form) {
     let modelTrace = {};
     const newStartDate = form.elements.namedItem("start-date").value; //redo to findClosest date
     const rebalancePeriod = form.elements.namedItem("rebalance-period").value;
+    const rebalanceIfLess = form.elements.namedItem("rebalance-slider").value / 100;
     const sharesPart =  parseInt(100 - form.elements.namedItem("balance-slider").value) / 100;
     if (newStartDate != startDate) {
         let deleteIndicies = [];
@@ -19,7 +20,7 @@ function showModel(form) {
         Plotly.deleteTraces(plot, deleteIndicies);
     }
     const colorInd = ((plot.data.length-2) / 2 + 2) % 10;
-    model = makeModel(newStartDate, rebalancePeriod, sharesPart);
+    model = makeModel(newStartDate, rebalancePeriod, sharesPart, rebalanceIfLess);
     activeModel = model;
     modelTrace.x = model.x;
     modelTrace.y = model.y;
@@ -46,7 +47,7 @@ function showModel(form) {
     return false;
 }
 
-function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart = 0.5) {
+function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart = 0.5, rebalanceIfLess = 0.5) {
     const RUGBITR5Pshare = 1 - sharesPart;
     const data = plot.data;
     const startIndex = data[0].x.indexOf(startDate);
@@ -90,12 +91,20 @@ function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart =
             console.log("Initial balance:" + model.x[model.x.length-1]);
         } else if (currentDate === nextRebalanceDate.format("YYYY-MM-DD")) {
             // REBALANCE
-            combinedValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[j-1] + data[1].y[i] / data[1].y[i-1] * model.bondValue[j-1];
-            shareValue = combinedValue * sharesPart;
-            bondValue = combinedValue * RUGBITR5Pshare;
+            shareValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[j-1];
+            bondValue = data[1].y[i] / data[1].y[i-1] * model.bondValue[j-1];
+            combinedValue = shareValue + bondValue;
+            
+            if ((shareValue / combinedValue) < rebalanceIfLess || (bondValue / combinedValue) < rebalanceIfLess) {
+                // will rebalance            
+                combinedValue = shareValue + bondValue;
+                shareValue = combinedValue * sharesPart;
+                bondValue = combinedValue * RUGBITR5Pshare;
+                model.rebalanceX.push(currentDate); model.rebalanceY.push(combinedValue);
+                console.log("rebalance:" + model.x[model.x.length-1]);
+            }
             nextRebalanceDate = moment(currentDate, "YYYY-MM-DD").add(rebalancePeriod, "d")
-            model.rebalanceX.push(currentDate); model.rebalanceY.push(combinedValue);
-            console.log("rebalance:" + model.x[model.x.length-1]);
+                        
         } else {
             // REGULAR
             shareValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[j-1];

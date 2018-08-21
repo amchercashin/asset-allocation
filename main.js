@@ -21,6 +21,7 @@ document.getElementById('start-date').value = startDate;
 document.getElementById('start-date').min = startDate;
 document.getElementById('rebalance-period').value = rebalancePeriod;
 document.getElementById('balance-slider').oninput = updateSliderLables;
+document.getElementById('rebalance-slider').oninput = updateRebalanceSliderLables;
 
 // addBlankPlot(bondPlot);
 // addTracesToPlot(bondPlot, bondIndices, bondStartDate);

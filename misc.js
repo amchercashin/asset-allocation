@@ -3,6 +3,10 @@ function updateSliderLables() {
     document.getElementById("RGBITR-share").innerText = this.value;
 }
 
+function updateRebalanceSliderLables() {
+    document.getElementById("rebalance-value").innerText = this.value;
+}
+
 async function extract(data, dateCol = 2, valueCol = 5) {
     return { x: data.map(row => row[dateCol]), 
              y: data.map(row => row[valueCol]) 
