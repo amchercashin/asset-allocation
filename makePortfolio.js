@@ -18,13 +18,27 @@ function showModel(form) {
         }
         Plotly.deleteTraces(plot, deleteIndicies);
     }
+    const colorInd = ((plot.data.length-2) / 2 + 2) % 10;
     model = makeModel(newStartDate, rebalancePeriod, sharesPart);
     activeModel = model;
     modelTrace.x = model.x;
     modelTrace.y = model.y;
     modelTrace.type = "scatter";
+    modelTrace.line = {};
+    modelTrace.line.color = colors[colorInd];
     modelTrace.name = "Портфель А:" + sharesPart.toString() + " О:" + ((100-sharesPart*100)/100).toString() + " Р:" + rebalancePeriod.toString();
     Plotly.addTraces(plot, modelTrace);
+    Plotly.addTraces(plot, {x: activeModel.rebalanceX, y: activeModel.rebalanceY, type: 'scatter', mode: 'markers', showlegend: false, hoverinfo: "skip",
+        marker: {
+            color: "white",
+            size: 9,
+            symbol: "circle",
+            opacity: 1,
+            line: {
+                width: 2,
+                color: colors[colorInd]
+            }            
+    }});
     // Plotly.addTraces(plot, rebalances);
     // rebalances = [];
     startDate = newStartDate;
@@ -45,11 +59,13 @@ function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart =
         x: new Array(),
         shareValue: new Array(),
         bondValue: new Array(),
-        y: new Array()
+        y: new Array(),
+        rebalanceX: new Array(),
+        rebalanceY: new Array()
     };
     
     let nextRebalanceDate = moment(startDate, "YYYY-MM-DD").add(rebalancePeriod, "d");
-    // let j = 0;
+    let j = 0;
     for(let i = startIndex; i < data[0].x.length; i++) {
         let shareValue;
         let bondValue;
@@ -74,16 +90,16 @@ function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart =
             console.log("Initial balance:" + model.x[model.x.length-1]);
         } else if (currentDate === nextRebalanceDate.format("YYYY-MM-DD")) {
             // REBALANCE
-            combinedValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[i-1] + data[1].y[i] / data[1].y[i-1] * model.bondValue[i-1];
+            combinedValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[j-1] + data[1].y[i] / data[1].y[i-1] * model.bondValue[j-1];
             shareValue = combinedValue * sharesPart;
             bondValue = combinedValue * RUGBITR5Pshare;
             nextRebalanceDate = moment(currentDate, "YYYY-MM-DD").add(rebalancePeriod, "d")
-            // rebalances.push({x: [currentDate, currentDate], y: [1.1, combinedValue], line: {color: lineColors[plot.data.length], dash: "dash"}, showlegend: false});
+            model.rebalanceX.push(currentDate); model.rebalanceY.push(combinedValue);
             console.log("rebalance:" + model.x[model.x.length-1]);
         } else {
             // REGULAR
-            shareValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[i-1];
-            bondValue = data[1].y[i] / data[1].y[i-1] * model.bondValue[i-1];
+            shareValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[j-1];
+            bondValue = data[1].y[i] / data[1].y[i-1] * model.bondValue[j-1];
             combinedValue = shareValue + bondValue;
         }
 
@@ -91,25 +107,25 @@ function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart =
         model.shareValue.push(shareValue);
         model.bondValue.push(bondValue);
         model.y.push(combinedValue);
-        // j++;
+        j++;
     }
     return model;
 }
 
 // let rebalances = [];
 
-// const lineColors = [
-//     '#1f77b4',  // muted blue
-//     '#ff7f0e',  // safety orange
-//     '#2ca02c',  // cooked asparagus green
-//     '#d62728',  // brick red
-//     '#9467bd',  // muted purple
-//     '#8c564b',  // chestnut brown
-//     '#e377c2',  // raspberry yogurt pink
-//     '#7f7f7f',  // middle gray
-//     '#bcbd22',  // curry yellow-green
-//     '#17becf'   // blue-teal
-// ];
+const colors = [
+    '#1f77b4',  // muted blue
+    '#ff7f0e',  // safety orange
+    '#2ca02c',  // cooked asparagus green
+    '#d62728',  // brick red
+    '#9467bd',  // muted purple
+    '#8c564b',  // chestnut brown
+    '#e377c2',  // raspberry yogurt pink
+    '#7f7f7f',  // middle gray
+    '#bcbd22',  // curry yellow-green
+    '#17becf'   // blue-teal
+];
 
 
 // plot.on('plotly_click', function(data){
