@@ -8,6 +8,7 @@ async function addTracesToPlot (plot, indices, startDate) {
         Plotly.addTraces(plot, trace);
         console.log("Add trace: " + index);
     }
+    Plotly.addTraces(plot, ipc);
     Plotly.relayout(plot, {showlegend: true, legend: {"orientation": "h", x: 0.5, y: -0.1}})
 }
 
