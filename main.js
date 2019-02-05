@@ -27,7 +27,8 @@ document.getElementById('balance-slider').oninput = updateSliderLables;
 
 addBlankPlot(plot);
 (async function(){
-    await addTracesToPlot(plot, indices, startDate);
+    await addTracesToPlot(plot, indices);
+    await updateAllTracesLoop(plot, indices, startDate);
     endDate = plot.data[0].x.slice(-1)[0];
     document.getElementById('start-date').max = endDate;
     document.getElementById('rebalance-period').max = moment.duration(moment(endDate).diff(moment(startDate))).as("days");
