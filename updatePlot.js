@@ -1,10 +1,19 @@
 async function updateAllTracesLoop (plot, indices, startDate) {
-    indices.forEach(async index => {
-        let dataUpdate = {};
+    let itemsProcessed = 0;
+    indices.forEach(async (index, indexNum, indices) => {
+        let dataUpdate = {};        
         dataUpdate = await maybeGetFromStore(index);
         if (dataUpdate) {
-            Plotly.extendTraces(plot, {x: [dataUpdate.x], y: [dataUpdate.y], marketDay: [dataUpdate.marketDay]}, [traceIndexByName(index)]);
-            console.log("Index: " + index + "loaded frome storage.");
+            Plotly.extendTraces(plot, {x: [dataUpdate.x], y: [dataUpdate.y], marketDay: [dataUpdate.marketDay]}, [traceIndexByName(index)]).then(
+                _ => {
+                    itemsProcessed++;
+                    if(itemsProcessed === indices.length) {
+                        document.getElementById("run-button").disabled = false;
+                    }  
+                    console.log("Index: " + index + "loaded frome storage.");
+                }
+            );
+            
         } else {
             console.log("start to build: " + index);
             let promises = [];
@@ -27,6 +36,11 @@ async function updateAllTracesLoop (plot, indices, startDate) {
                 plot.data[traceIndexByName(index)].y = expandedData.y;
                 plot.data[traceIndexByName(index)].marketDay = expandedData.marketDay;
                 
+                itemsProcessed++;
+                if(itemsProcessed === indices.length) {
+                    document.getElementById("run-button").disabled = false;
+                }                
+
                 maybeStore(index, plot.data[traceIndexByName(index)]);
                 console.log(index + " put to storage.");
                 return true;
