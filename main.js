@@ -26,8 +26,8 @@ document.getElementById('balance-slider').oninput = updateSliderLables;
 // addTracesToPlot(bondPlot, bondIndices, bondStartDate);
 
 addBlankPlot(plot);
+addTracesToPlot(plot, indices);
 (async function(){
-    await addTracesToPlot(plot, indices);
     await updateAllTracesLoop(plot, indices, startDate);
     endDate = plot.data[0].x.slice(-1)[0];
     document.getElementById('start-date').max = endDate;

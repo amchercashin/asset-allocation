@@ -19,8 +19,8 @@ function showModel(form) {
         Plotly.deleteTraces(plot, deleteIndicies);
     }
     const colorInd = ((plot.data.length-2) / 2 + 2) % 10;
-    model = makeModel(newStartDate, rebalancePeriod, sharesPart);
-    activeModel = model;
+    let model = makeModel(newStartDate, rebalancePeriod, sharesPart);
+    let activeModel = model;
     modelTrace.x = model.x;
     modelTrace.y = model.y;
     modelTrace.type = "scatter";
@@ -48,11 +48,12 @@ function showModel(form) {
 
 function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart = 0.5) {
     const RUGBITR5Pshare = 1 - sharesPart;
-    const data = plot.data;
+    const data = plot.data;    
     const startIndex = data[0].x.indexOf(startDate);
     for (trace in data) {
         if (trace < 2) {
-            data[trace].y = normalize(data[trace].y, startIndex);
+            // data[trace] = sortByDate(data[trace]);
+            data[trace].y = normalize2(data[trace].y, startIndex);
         }
     }
     const model = {

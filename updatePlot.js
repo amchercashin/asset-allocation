@@ -3,19 +3,30 @@ async function updateAllTracesLoop (plot, indices, startDate) {
         let dataUpdate = {};
         dataUpdate = await maybeGetFromStore(index);
         if (dataUpdate) {
-            Plotly.extendTraces(plot, {x: [dataUpdate.x], y: [dataUpdate.y]}, [traceIndexByName(index)]);
+            Plotly.extendTraces(plot, {x: [dataUpdate.x], y: [dataUpdate.y], marketDay: [dataUpdate.marketDay]}, [traceIndexByName(index)]);
             console.log("Index: " + index + "loaded frome storage.");
         } else {
             console.log("start to build: " + index);
             let promises = [];
-            promises.push(updateTraceLoop(plot, index, startDate, engine = "stock"));
             if (index === "RGBITR") {
+                promises.push(updateTraceLoop(plot, index, startDate, engine = "stock"));
                 promises.push(updateTraceLoop(plot, index, startDate, engine = "state"));
+            } else {
+                promises.push(updateTraceLoop(plot, index, startDate, engine = "stock"));
             }
 
             Promise.all(promises).then(val => {
                 return Promise.all(val.flat()); 
             }).then(val => {
+                let sortedData = sortByDate(plot.data[traceIndexByName(index)]);
+                plot.data[traceIndexByName(index)].x = sortedData.x;
+                plot.data[traceIndexByName(index)].y = sortedData.y;
+                
+                let expandedData = expandTimeseries(plot.data[traceIndexByName(index)]);
+                plot.data[traceIndexByName(index)].x = expandedData.x;
+                plot.data[traceIndexByName(index)].y = expandedData.y;
+                plot.data[traceIndexByName(index)].marketDay = expandedData.marketDay;
+                
                 maybeStore(index, plot.data[traceIndexByName(index)]);
                 console.log(index + " put to storage.");
                 return true;
@@ -42,8 +53,9 @@ async function updateTraceLoop (plot, index, startDate, engine) {
 
 async function updateTraceData (plot, index, startDate, fromIndex, firstValue, engine) {
     let traceDataChunk = await axios.get("https://iss.moex.com/iss/history/engines/"+engine+"/markets/index/securities/"+index+".json?start="+fromIndex+"&from="+startDate);
-    dataUpdate = await extract(traceDataChunk.data.history.data);
+    let dataUpdate = await extract(traceDataChunk.data.history.data, 2, engine==="stock" ? 5 : 7 );
     dataUpdate.y = await normalize(dataUpdate.y, firstValue);
+    // dataUpdate = expandTimeseries(dataUpdate);
     Plotly.extendTraces(plot, {x: [dataUpdate.x], y: [dataUpdate.y]}, [traceIndexByName(index)]);
     return true;
 }
