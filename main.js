@@ -88,12 +88,19 @@ simulationWorker.onmessage = function(e) {
     return true;
 }
 
-function makeCAGRtrace(CAGR, showLegend = false, textPosition = "left", startIndex = 0) {
+function makeCAGRtrace(CAGR, showLegend = false, textPosition = "left", startIndex = 0, daysPerPoint = 90) {
     const dayCAGR = CAGR**(1/365);
-    const newX = plot.data[0].x.slice(startIndex, plot.data[0].x.length);
-    const newY = newX.map((x, i) => dayCAGR**i);
+    let newX = plot.data[0].x.slice(startIndex, plot.data[0].x.length);
+    let newY = newX.map((x, i) => dayCAGR**i);
+
+    newX = newX.filter((el, i, arr) => {
+        if (i===0) {return true} else if (i===arr.length-1) {return true} else if (i % daysPerPoint === 0) {return true}
+    });
+    newY = newY.filter((el, i, arr) => {
+        if (i===0) {return true} else if (i===arr.length-1) {return true} else if (i % daysPerPoint === 0) {return true}
+    });
     const annotation = [];
-    annotation[newY.length-150] = "CAGR:"+Math.round(CAGR*1000)/1000;
+    annotation[newY.length-1] = "CAGR:"+Math.round(CAGR*1000)/1000;
     return {x: newX, y: newY, type: "scatter", mode: 'lines+text', text: annotation, textposition: textPosition, showlegend: showLegend, hoverinfo: "skip"};
 }
 
