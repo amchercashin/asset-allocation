@@ -1,22 +1,21 @@
 async function updateAllTracesLoop (plot, indices, startDate) {
     let itemsProcessed = 0;
-    indices.forEach(async (index, indexNum, indices) => {
+    return indices.map(async (index, indexNum, indices) => {
         let dataUpdate = {};        
         dataUpdate = await maybeGetFromStore(index);
+        let promises = [];
         if (dataUpdate) {
-            Plotly.extendTraces(plot, {x: [dataUpdate.x], y: [dataUpdate.y], marketDay: [dataUpdate.marketDay]}, [traceIndexByName(index)]).then(
-                _ => {
-                    itemsProcessed++;
-                    if(itemsProcessed === indices.length) {
-                        document.getElementById("run-button").disabled = false;
-                    }  
-                    console.log("Index: " + index + "loaded frome storage.");
-                }
+            
+            promises.push(
+                Plotly.extendTraces(plot, {x: [dataUpdate.x], y: [dataUpdate.y], marketDay: [dataUpdate.marketDay]}, [traceIndexByName(index)]).then(
+                x => {
+                        console.log("Index: " + index + "loaded frome storage.");                    
+                    }
+                )
             );
             
         } else {
             console.log("start to build: " + index);
-            let promises = [];
             if (index === "RGBITR") {
                 promises.push(updateTraceLoop(plot, index, startDate, engine = "stock"));
                 promises.push(updateTraceLoop(plot, index, startDate, engine = "state"));
@@ -27,29 +26,20 @@ async function updateAllTracesLoop (plot, indices, startDate) {
             Promise.all(promises).then(val => {
                 return Promise.all(val.flat()); 
             }).then(val => {
-                let sortedData = sortByDate(plot.data[traceIndexByName(index)]);
-                plot.data[traceIndexByName(index)].x = sortedData.x;
-                plot.data[traceIndexByName(index)].y = sortedData.y;
-                
-                let expandedData = expandTimeseries(plot.data[traceIndexByName(index)]);
+                let sortedData = sortByDate(plot.data[traceIndexByName(index)]);                
+                let expandedData = expandTimeseries(sortedData);
                 plot.data[traceIndexByName(index)].x = expandedData.x;
                 plot.data[traceIndexByName(index)].y = expandedData.y;
-                plot.data[traceIndexByName(index)].marketDay = expandedData.marketDay;
-                
-                itemsProcessed++;
-                if(itemsProcessed === indices.length) {
-                    document.getElementById("run-button").disabled = false;
-                }                
+                plot.data[traceIndexByName(index)].marketDay = expandedData.marketDay;    
 
                 maybeStore(index, plot.data[traceIndexByName(index)]);
-                console.log(index + " put to storage.");
-                return true;
+                console.log(index + " put to storage.");                
             }).catch((err) => {
                 throw new Error('Error in maybeStore promise chain' + err.message);
             });
         }
+        return promises;
     });
-    return true;
 }
 
 async function updateTraceLoop (plot, index, startDate, engine) {

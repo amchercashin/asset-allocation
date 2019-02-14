@@ -28,11 +28,74 @@ document.getElementById('balance-slider').oninput = updateSliderLables;
 addBlankPlot(plot);
 addTracesToPlot(plot, indices);
 (async function(){
-    await updateAllTracesLoop(plot, indices, startDate);
-    endDate = plot.data[0].x.slice(-1)[0];
+    let res = await updateAllTracesLoop(plot, indices, startDate);
+    console.log(res);
+    res = await Promise.all(res);
+    console.log(res);
+    res = await Promise.all(res.flat());
+    console.log(res);
+    res = await Promise.all(res.flat());
+    console.log(res);
+
+    document.getElementById("run-button").disabled = false;
+    plot.layout.xaxis.autorange = false;
+    addCAGRs();
+    let endDate = plot.data[0].x.slice(-1)[0];
     document.getElementById('start-date').max = endDate;
     document.getElementById('rebalance-period').max = moment.duration(moment(endDate).diff(moment(startDate))).as("days");
 })()
+
+function addCAGRs() {
+    const colors = [
+        '#1f77b4',  // muted blue
+        '#ff7f0e',  // safety orange]
+        'grey'
+    ]
+    for (i=0; i<3; i++) {
+        let startDate = moment(plot.data[i].x[0], "YYYY-MM-DD");
+        let endDate = moment(plot.data[i].x[plot.data[i].x.length-1], "YYYY-MM-DD");
+        let durationInDays = moment.duration(endDate.diff(startDate)).as("days") + 1;
+        let startVal = plot.data[i].y[0];
+        let endVal = plot.data[i].y[plot.data[i].y.length-1];
+        let CAGR = (endVal / startVal) ** (1 / (durationInDays/365));
+        let CAGRtrace = makeCAGRtrace(CAGR);
+        CAGRtrace.line = {};
+        CAGRtrace.line.color = colors[i];
+        CAGRtrace.line.dash = "dot";
+        CAGRtrace.line.width = 1;
+        CAGRtrace.textfont = {color: colors[i]}
+        Plotly.addTraces(plot, CAGRtrace);
+    }
+    return true;
+}
+
+
+let simulationWorker = new Worker('simulation.js');
+function startSimulation() {
+    simulationWorker.postMessage(plot.data);
+    console.log('Message posted to worker');
+    return true;
+  }
+
+const evaluatedModels = [];
+simulationWorker.onmessage = function(e) {
+    console.log('Message received from worker');
+    let CAGRtrace = makeCAGRtrace(e.data.weightedCAGR);
+    CAGRtrace.name = "Share part: " + e.data.sharesParts + "; SD: " + Math.round(e.data.standardDeviation*1000)/1000;
+    CAGRtrace.showlegend = true;
+    Plotly.addTraces(plot, CAGRtrace);
+    evaluatedModels.push(e.data);
+    return true;
+}
+
+function makeCAGRtrace(CAGR, showLegend = false, textPosition = "left", startIndex = 0) {
+    const dayCAGR = CAGR**(1/365);
+    const newX = plot.data[0].x.slice(startIndex, plot.data[0].x.length);
+    const newY = newX.map((x, i) => dayCAGR**i);
+    const annotation = [];
+    annotation[newY.length-150] = "CAGR:"+Math.round(CAGR*1000)/1000;
+    return {x: newX, y: newY, type: "scatter", mode: 'lines+text', text: annotation, textposition: textPosition, showlegend: showLegend, hoverinfo: "skip"};
+}
 
 plot.layout = {
     showlegend: true, 

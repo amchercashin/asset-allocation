@@ -11,5 +11,5 @@ ipc.line = {};
 
 ipc.line.color = "grey";
 
-ipc.line.dash = "dash";
+ipc.line.dash = "solid";
 

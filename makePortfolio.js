@@ -9,16 +9,42 @@ function showModel(form) {
     const newStartDate = form.elements.namedItem("start-date").value; //redo to findClosest date
     const rebalancePeriod = form.elements.namedItem("rebalance-period").value;
     const sharesPart =  parseInt(100 - form.elements.namedItem("balance-slider").value) / 100;
+    
     if (newStartDate != startDate) {
+        
         let deleteIndicies = [];
         for (trace in plot.data) {
+            const startIndex = plot.data[trace].x.indexOf(newStartDate);
             if (trace > 1) {
                 deleteIndicies.push(parseInt(trace));
             }
+            if (trace < 2) {
+                // data[trace] = sortByDate(data[trace]);
+                const colors = [
+                    '#1f77b4',  // muted blue
+                    '#ff7f0e',  // safety orange]
+                    'grey'
+                ]
+                plot.data[trace].y = normalize2(plot.data[trace].y, startIndex);
+                let startDate = moment(plot.data[trace].x[startIndex], "YYYY-MM-DD");
+                let endDate = moment(plot.data[trace].x[plot.data[trace].x.length-1], "YYYY-MM-DD");
+                let durationInDays = moment.duration(endDate.diff(startDate)).as("days") + 1;
+                let startVal = plot.data[trace].y[startIndex];
+                let endVal = plot.data[trace].y[plot.data[trace].y.length-1];
+                let CAGR = (endVal / startVal) ** (1 / (durationInDays/365));
+                let CAGRtrace = makeCAGRtrace(CAGR, false, "left", startIndex);
+                CAGRtrace.line = {};
+                CAGRtrace.line.color = colors[trace];
+                CAGRtrace.line.dash = "dot";
+                CAGRtrace.line.width = 1;
+                CAGRtrace.textfont = {color: colors[trace]}
+                Plotly.addTraces(plot, CAGRtrace);
+            }
         }
         Plotly.deleteTraces(plot, deleteIndicies);
+        // addCAGRs();
     }
-    const colorInd = ((plot.data.length-2) / 2 + 2) % 10;
+    const colorInd = plot.data.length == 4? (plot.data.length/2) % 10 : ((plot.data.length-2)/2) % 10;
     let model = makeModel(newStartDate, rebalancePeriod, sharesPart);
     let activeModel = model;
     modelTrace.x = model.x;
@@ -44,73 +70,6 @@ function showModel(form) {
     startDate = newStartDate;
     // Plotly.relayout(plot, {showlegend: true, legend: {"orientation": "h", x: 0.5, y: -0.1}})
     return false;
-}
-
-function makeModel(startDate = "2010-12-30", rebalancePeriod = 365, sharesPart = 0.5) {
-    const RUGBITR5Pshare = 1 - sharesPart;
-    const data = plot.data;    
-    const startIndex = data[0].x.indexOf(startDate);
-    for (trace in data) {
-        if (trace < 2) {
-            // data[trace] = sortByDate(data[trace]);
-            data[trace].y = normalize2(data[trace].y, startIndex);
-        }
-    }
-    const model = {
-        x: new Array(),
-        shareValue: new Array(),
-        bondValue: new Array(),
-        y: new Array(),
-        rebalanceX: new Array(),
-        rebalanceY: new Array()
-    };
-    
-    let nextRebalanceDate = moment(startDate, "YYYY-MM-DD").add(rebalancePeriod, "d");
-    let j = 0;
-    for(let i = startIndex; i < data[0].x.length; i++) {
-        let shareValue;
-        let bondValue;
-        let combinedValue;
-        let currentDate = data[0].x[i];
-        // console.log(nextRebalanceDate)
-        model.x.push(currentDate);
-        if (currentDate === nextRebalanceDate.format("YYYY-MM-DD") && !data[0].marketDay[i]) {
-            for (let d = i; d < data[0].x.length; d++) {
-                if (data[0].marketDay[d]) {
-                    nextRebalanceDate = moment(data[0].x[d], "YYYY-MM-DD");
-                    break;
-                }
-            }
-            console.log("Shifting rebalance day: " + currentDate + "\nto next market day: " + nextRebalanceDate.format("YYYY-MM-DD"))
-        }
-        if (i === startIndex) {
-            // INITIAL BALANCE
-            combinedValue = (data[0].y[i] + data[1].y[i]) / 2;
-            shareValue = combinedValue * sharesPart;
-            bondValue = combinedValue * RUGBITR5Pshare;
-            console.log("Initial balance:" + model.x[model.x.length-1]);
-        } else if (currentDate === nextRebalanceDate.format("YYYY-MM-DD")) {
-            // REBALANCE
-            combinedValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[j-1] + data[1].y[i] / data[1].y[i-1] * model.bondValue[j-1];
-            shareValue = combinedValue * sharesPart;
-            bondValue = combinedValue * RUGBITR5Pshare;
-            nextRebalanceDate = moment(currentDate, "YYYY-MM-DD").add(rebalancePeriod, "d")
-            model.rebalanceX.push(currentDate); model.rebalanceY.push(combinedValue);
-            console.log("rebalance:" + model.x[model.x.length-1]);
-        } else {
-            // REGULAR
-            shareValue = data[0].y[i] / data[0].y[i-1] * model.shareValue[j-1];
-            bondValue = data[1].y[i] / data[1].y[i-1] * model.bondValue[j-1];
-            combinedValue = shareValue + bondValue;
-        }
-
-        // UPDATE MODEL
-        model.shareValue.push(shareValue);
-        model.bondValue.push(bondValue);
-        model.y.push(combinedValue);
-        j++;
-    }
-    return model;
 }
 
 // let rebalances = [];
