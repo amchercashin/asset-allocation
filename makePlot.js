@@ -1,5 +1,6 @@
 function addBlankPlot(plotDiv) {
     Plotly.newPlot(plotDiv, [], {showlegend: true, legend: {"orientation": "h"}});
+    Plotly.newPlot("simDiv", [], {legend: {"orientation": "h"}});
 }
 
 function addTracesToPlot (plot, indices) {

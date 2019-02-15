@@ -1,5 +1,4 @@
 async function updateAllTracesLoop (plot, indices, startDate) {
-    let itemsProcessed = 0;
     return indices.map(async (index, indexNum, indices) => {
         let dataUpdate = {};        
         dataUpdate = await maybeGetFromStore(index);

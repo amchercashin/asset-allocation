@@ -79,13 +79,24 @@ function startSimulation() {
   }
 
 const evaluatedModels = [];
+let simTrace = {x: [], y: [], marker: {color: [], colorbar: {title: "Ребалансировка, дней"}}, type: "scatter", mode: "markers"};
 simulationWorker.onmessage = function(e) {
     console.log('Message received from worker');
-    let CAGRtrace = makeCAGRtrace(e.data.weightedCAGR);
-    CAGRtrace.name = "Share part: " + e.data.sharesParts + "; SD: " + Math.round(e.data.standardDeviation*1000)/1000;
-    CAGRtrace.showlegend = true;
-    Plotly.addTraces(plot, CAGRtrace);
+    // let CAGRtrace = makeCAGRtrace(e.data.weightedCAGR);
+    // CAGRtrace.name = "Share part: " + e.data.sharesParts + "; SD: " + Math.round(e.data.standardDeviation*1000)/1000;
+    // CAGRtrace.showlegend = true;
+    // Plotly.addTraces(plot, CAGRtrace);
     evaluatedModels.push(e.data);
+    
+    
+    simTrace.x.push(e.data.sharesParts);
+    simTrace.y.push(e.data.weightedCAGR);
+    simTrace.marker.color.push(e.data.rebalancePeriod);
+    console.log(simTrace);
+    Plotly.newPlot("simDiv", [simTrace], {xaxis: {title: 'Доля акций'}, yaxis: {title: 'CAGR'}, hovermode: 'closest' });
+    
+
+
     return true;
 }
 
