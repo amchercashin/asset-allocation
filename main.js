@@ -34,8 +34,8 @@ addTracesToPlot(plot, indices);
     console.log(res);
     res = await Promise.all(res.flat());
     console.log(res);
-    res = await Promise.all(res.flat());
-    console.log(res);
+    // res = await Promise.all(res.flat());
+    // console.log(res);
 
     document.getElementById("run-button").disabled = false;
     plot.layout.xaxis.autorange = false;
@@ -46,6 +46,7 @@ addTracesToPlot(plot, indices);
 })()
 
 function addCAGRs() {
+    console.log("CAGRS strart")
     const colors = [
         '#1f77b4',  // muted blue
         '#ff7f0e',  // safety orange]

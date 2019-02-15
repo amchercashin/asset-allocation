@@ -4,9 +4,10 @@ async function updateAllTracesLoop (plot, indices, startDate) {
         let dataUpdate = {};        
         dataUpdate = await maybeGetFromStore(index);
         let promises = [];
+        let allDonePromises = [];
         if (dataUpdate) {
             
-            promises.push(
+            allDonePromises.push(
                 Plotly.extendTraces(plot, {x: [dataUpdate.x], y: [dataUpdate.y], marketDay: [dataUpdate.marketDay]}, [traceIndexByName(index)]).then(
                 x => {
                         console.log("Index: " + index + "loaded frome storage.");                    
@@ -23,22 +24,24 @@ async function updateAllTracesLoop (plot, indices, startDate) {
                 promises.push(updateTraceLoop(plot, index, startDate, engine = "stock"));
             }
 
-            Promise.all(promises).then(val => {
-                return Promise.all(val.flat()); 
-            }).then(val => {
-                let sortedData = sortByDate(plot.data[traceIndexByName(index)]);                
-                let expandedData = expandTimeseries(sortedData);
-                plot.data[traceIndexByName(index)].x = expandedData.x;
-                plot.data[traceIndexByName(index)].y = expandedData.y;
-                plot.data[traceIndexByName(index)].marketDay = expandedData.marketDay;    
+            allDonePromises.push(Promise.all(promises).then(val => {
+                        return Promise.all(val.flat()); 
+                    }).then(val => {
+                        let sortedData = sortByDate(plot.data[traceIndexByName(index)]);                
+                        let expandedData = expandTimeseries(sortedData);
+                        plot.data[traceIndexByName(index)].x = expandedData.x;
+                        plot.data[traceIndexByName(index)].y = expandedData.y;
+                        plot.data[traceIndexByName(index)].marketDay = expandedData.marketDay;    
 
-                maybeStore(index, plot.data[traceIndexByName(index)]);
-                console.log(index + " put to storage.");                
-            }).catch((err) => {
-                throw new Error('Error in maybeStore promise chain' + err.message);
-            });
+                        maybeStore(index, plot.data[traceIndexByName(index)]);
+                        console.log(index + " put to storage.");                
+                    }).catch((err) => {
+                        throw new Error('Error in maybeStore promise chain' + err.message);
+                    })
+            )
+
         }
-        return promises;
+        return allDonePromises;
     });
 }
 
