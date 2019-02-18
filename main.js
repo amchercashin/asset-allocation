@@ -1,4 +1,5 @@
-let plot = document.getElementById("graphDiv");
+const plot = document.getElementById("graphDiv");
+const plot2 = document.getElementById("simDiv");
 // let bondPlot = document.getElementById("bondPlot");
 // let bondIndices = [ "RUGBITR1Y", "RUGBITR3Y", "RUGBITR5Y", "RUGBITR10Y", "RUGBITR5+", "RGBITR"];
 // let bondStartDate = "2010-12-30";
@@ -92,7 +93,7 @@ simulationWorker.onmessage = function(e) {
     simTrace.x.push(e.data.sharesParts);
     simTrace.y.push(e.data.weightedCAGR);
     simTrace.marker.color.push(e.data.rebalancePeriod);
-    console.log(simTrace);
+    // console.log(simTrace);
     Plotly.newPlot("simDiv", [simTrace], {xaxis: {title: 'Доля акций'}, yaxis: {title: 'CAGR'}, hovermode: 'closest' });
     
 
@@ -128,8 +129,20 @@ plot.layout = {
         }
  };
 
+//  plot.layout = {
+//     // showlegend: true, 
+//     // legend: {"orientation": "h", x: 0.5, y: -0.1},
+//     // hovermode:'x',
+//     // margin: {
+//     //     t: 10, //top margin
+//     //     l: 20, //left margin
+//     //     r: 20, //right margin
+//     //     b: 10 //bottom margin
+//     //     }
+//  };
 
 window.onresize = function() {
     Plotly.Plots.resize(plot);
+    Plotly.Plots.resize(plot2);
     // Plotly.Plots.resize(bondPlot);
 };

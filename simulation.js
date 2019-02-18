@@ -2,18 +2,19 @@ const rebalancePeriods = [7, 30, 90, 182, 365, 182+365, 365*2];
 // const rebalancePeriods = [365];
 const sharesParts = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
 
-function simulateForEveryPeriod(rebalancePeriod = 365, sharesPart = 0.5, data = plot.data) {
+function simulateForEveryPeriod(rebalancePeriod = 365, sharesPart = 0.5, data = plot.data, skipDays = 100) {
     const models = [];
     let i = 0;
-    data[0].x.forEach(modelStartDate => {
-        i++;
-        if (i % 100 === 0) {
+    data[0].x.forEach(modelStartDate => {        
+        if (i % skipDays === 0) {
             const model = makeModel(modelStartDate, rebalancePeriod, sharesPart, data, showInfo = false);
             model.CAGR = Math.pow(model.y[model.y.length-1]/model.y[0], 1 / (model.y.length / 365));
             model.CAGRweight = model.y.length;
             models.push(model);
             // Plotly.addTraces(plot, {x: model.x, y: model.y, type: "scatter", showlegend: false});
         }
+
+        i++;
     })
     return models;
 }
@@ -57,7 +58,7 @@ function simulate (data = plot.data) {
     for (p of rebalancePeriods) {
         for (s of sharesParts) {
             const weightedModel = {};
-            const models = simulateForEveryPeriod(rebalancePeriod = p, sharesPart = s, data = data);
+            const models = simulateForEveryPeriod(rebalancePeriod = p, sharesPart = s, data = data, skipDays = 100);
             weightedModel.rebalancePeriod = p;
             weightedModel.sharesParts = s;
             weightedModel.weightedCAGR = weightedCAGR(models);
@@ -69,6 +70,7 @@ function simulate (data = plot.data) {
     }
     let timeDiff = new Date() - startTime;
     console.log(Math.round(timeDiff/1000) + " seconds");
+
     // return results;
 }
 
@@ -79,4 +81,5 @@ onmessage = function(e) {
     const workerResult = simulate(e.data);
     // console.log('Posting message back to main script');
     // postMessage(workerResult);
+    close();
   }
