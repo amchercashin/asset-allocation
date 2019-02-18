@@ -56,10 +56,10 @@ function addCAGRs() {
     for (i=0; i<3; i++) {
         let startDate = moment(plot.data[i].x[0], "YYYY-MM-DD");
         let endDate = moment(plot.data[i].x[plot.data[i].x.length-1], "YYYY-MM-DD");
-        let durationInDays = moment.duration(endDate.diff(startDate)).as("days") + 1;
+        let durationInDays = moment.duration(endDate.diff(startDate)).as("days");
         let startVal = plot.data[i].y[0];
         let endVal = plot.data[i].y[plot.data[i].y.length-1];
-        let CAGR = (endVal / startVal) ** (1 / (durationInDays/365));
+        let CAGR = (endVal / startVal) ** (1 / (durationInDays/364));
         let CAGRtrace = makeCAGRtrace(CAGR);
         CAGRtrace.line = {};
         CAGRtrace.line.color = colors[i];
@@ -102,7 +102,7 @@ simulationWorker.onmessage = function(e) {
 }
 
 function makeCAGRtrace(CAGR, showLegend = false, textPosition = "left", startIndex = 0, daysPerPoint = 90) {
-    const dayCAGR = CAGR**(1/365);
+    const dayCAGR = CAGR**(1/364);
     let newX = plot.data[0].x.slice(startIndex, plot.data[0].x.length);
     let newY = newX.map((x, i) => dayCAGR**i);
 
