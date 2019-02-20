@@ -8,8 +8,8 @@ function simulateForEveryPeriod(rebalancePeriod = 365, sharesPart = 0.5, data = 
     data[0].x.forEach(modelStartDate => {        
         if (i % skipDays === 0) {
             const model = makeModel(modelStartDate, rebalancePeriod, sharesPart, data, showInfo = false);
-            model.CAGR = Math.pow(model.y[model.y.length-1]/model.y[0], 1 / (model.y.length-1 / 364));
-            model.CAGRweight = model.y.length;
+            model.CAGR = ( model.y[model.y.length-1]/model.y[0] ) ** (364 / (model.y.length-1));
+            model.CAGRweight = model.y.length-1;
             models.push(model);
             // Plotly.addTraces(plot, {x: model.x, y: model.y, type: "scatter", showlegend: false});
         }
@@ -58,7 +58,7 @@ function simulate (data = plot.data) {
     for (p of rebalancePeriods) {
         for (s of sharesParts) {
             const weightedModel = {};
-            const models = simulateForEveryPeriod(rebalancePeriod = p, sharesPart = s, data = data, skipDays = 100);
+            const models = simulateForEveryPeriod(rebalancePeriod = p, sharesPart = s, data = data, skipDays = 60);
             weightedModel.rebalancePeriod = p;
             weightedModel.sharesParts = s;
             weightedModel.weightedCAGR = weightedCAGR(models);
