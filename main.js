@@ -39,6 +39,7 @@ addTracesToPlot(plot, indices);
     // console.log(res);
 
     document.getElementById("run-button").disabled = false;
+    document.getElementById("run-button2").disabled = false;
     plot.layout.xaxis.autorange = false;
     addCAGRs();
     let endDate = plot.data[0].x.slice(-1)[0];
@@ -81,6 +82,7 @@ function startSimulation() {
 
 const evaluatedModels = [];
 let simTrace = {x: [], y: [], marker: {color: [], colorbar: {title: "Ребалансировка, дней"}}, type: "scatter", mode: "markers"};
+let simTraceSD = {x: [], y: [], xaxis: "x", yaxis: "y2", marker: {color: [], colorbar: {title: "Ребалансировка, дней"}}, type: "scatter", mode: "markers"};
 simulationWorker.onmessage = function(e) {
     console.log('Message received from worker');
     // let CAGRtrace = makeCAGRtrace(e.data.weightedCAGR);
@@ -91,10 +93,19 @@ simulationWorker.onmessage = function(e) {
     
     
     simTrace.x.push(e.data.sharesParts);
+    simTraceSD.x.push(e.data.sharesParts);
     simTrace.y.push(e.data.weightedCAGR);
+    simTraceSD.y.push(e.data.standardDeviation);
     simTrace.marker.color.push(e.data.rebalancePeriod);
+    simTraceSD.marker.color.push(e.data.rebalancePeriod);
     // console.log(simTrace);
-    Plotly.newPlot("simDiv", [simTrace], {xaxis: {title: 'Доля акций'}, yaxis: {title: 'CAGR'}, hovermode: 'closest' });
+    Plotly.newPlot("simDiv", [simTrace, simTraceSD], {height: 700,xaxis: {title: 'Доля акций'}, yaxis: {title: 'CAGR'}, yaxis2: {title: 'CAGR standard deviation'},
+        xaxis2: {title: 'Доля акций'}, hovermode: 'closest' , grid: {
+            rows: 2,
+            columns: 1,
+            subplots:[['xy'], ['xy2']],
+            roworder:'top to bottom'
+          }});
     
 
 
