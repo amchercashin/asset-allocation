@@ -1,4 +1,4 @@
-const rebalancePeriods = [7, 30, 90, 182, 365, 182+365, 365*2];
+const rebalancePeriods = [1, 7, 30, 90, 182, 365, 182+365, 365*2];
 // const rebalancePeriods = [365];
 const sharesParts = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
 

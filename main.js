@@ -81,8 +81,8 @@ function startSimulation() {
   }
 
 const evaluatedModels = [];
-let simTrace = {x: [], y: [], marker: {color: [], colorbar: {title: "Ребалансировка, дней"}}, type: "scatter", mode: "markers"};
-let simTraceSD = {x: [], y: [], xaxis: "x", yaxis: "y2", marker: {color: [], colorbar: {title: "Ребалансировка, дней"}}, type: "scatter", mode: "markers"};
+let simTrace = {x: [], y: [], marker: {color: [], colorbar: {title: "Ребалансировка, дней"}, size: 12}, type: "scatter", mode: "markers"};
+let simTraceSD = {x: [], y: [], xaxis: "x", yaxis: "y2", marker: {color: [], colorbar: {title: "Ребалансировка, дней"}, size: 12}, type: "scatter", mode: "markers"};
 simulationWorker.onmessage = function(e) {
     console.log('Message received from worker');
     // let CAGRtrace = makeCAGRtrace(e.data.weightedCAGR);
@@ -100,7 +100,7 @@ simulationWorker.onmessage = function(e) {
     simTraceSD.marker.color.push(e.data.rebalancePeriod);
     // console.log(simTrace);
     Plotly.newPlot("simDiv", [simTrace, simTraceSD], {height: 700,xaxis: {title: 'Доля акций'}, yaxis: {title: 'CAGR'}, yaxis2: {title: 'CAGR standard deviation'},
-        xaxis2: {title: 'Доля акций'}, hovermode: 'closest' , grid: {
+        xaxis2: {title: 'Доля акций'}, hovermode: 'closest' , showlegend: false, grid: {
             rows: 2,
             columns: 1,
             subplots:[['xy'], ['xy2']],
