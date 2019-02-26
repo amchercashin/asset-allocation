@@ -5,7 +5,7 @@ const sharesParts = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
 function simulateForEveryPeriod(rebalancePeriod = 365, sharesPart = 0.5, data = plot.data, skipDays = 100) {
     const models = [];
     let i = 0;
-    data[0].x.forEach(modelStartDate => {        
+    for (modelStartDate of data[0].x) {       
         if (i % skipDays === 0) {
             const model = makeModel(modelStartDate, rebalancePeriod, sharesPart, data, showInfo = false);
             model.CAGR = ( model.y[model.y.length-1]/model.y[0] ) ** (364 / (model.y.length-1));
@@ -15,7 +15,7 @@ function simulateForEveryPeriod(rebalancePeriod = 365, sharesPart = 0.5, data = 
         }
 
         i++;
-    })
+    }
     return models;
 }
 

@@ -45,7 +45,7 @@ function showModel(form) {
         // addCAGRs();
     }
     const colorInd = plot.data.length == 4? (plot.data.length/2) % 10 : ((plot.data.length-2)/2) % 10;
-    let model = makeModel(newStartDate, rebalancePeriod, sharesPart);
+    let model = makeModel(newStartDate, rebalancePeriod, sharesPart, plot.data, true);
     let activeModel = model;
     modelTrace.x = model.x;
     modelTrace.y = model.y;
