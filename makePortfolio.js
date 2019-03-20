@@ -1,6 +1,8 @@
 plot.on('plotly_click', function(data){
+    document.getElementById('start-date').style.backgroundColor = "salmon";
+    setTimeout(function() {document.getElementById('start-date').style.backgroundColor = "#fff";}, 300);
     document.getElementById('start-date').value = data.points[0].x;
-    console.log(data.points[0].x);
+    // console.log(data.points[0].x);
     return false;
 });
 
