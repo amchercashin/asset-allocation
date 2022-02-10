@@ -1,3 +1,11 @@
+function xLogSwtich(xLogCheckbox) {
+    if (xLogCheckbox.checked) {
+            Plotly.relayout(document.getElementById("graphDiv"), {'yaxis.type': 'log'});
+        } else {
+            Plotly.relayout(document.getElementById("graphDiv"), {'yaxis.type': 'linear'});
+        }
+}
+
 function updateSliderLables() {
     document.getElementById("MCFTRR-share").innerText = parseInt(100 - this.value);
     document.getElementById("RGBITR-share").innerText = this.value;
