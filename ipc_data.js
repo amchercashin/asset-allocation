@@ -1,17 +1,15 @@
 // IPC (Consumer Price Index) data for Russia.
 //
 // This script computes the IPC series dynamically from monthly CPI percentages
-// published by the Federal State Statistics Service (Rosstat).  Using the
-// Rosstat table hosted on StatBureau【836155286428935†L74-L85】 we update the graph through June 2025.
-// Earlier versions of this file hard‑coded an array of values that ended in
-// May 2020.  To avoid manual edits in the future, the series is now
-// constructed programmatically.
+// published by the Federal State Statistics Service (Rosstat).  The series
+// is normalised so that the first value (February 2003) equals 1.0.  Each
+// observation is dated on the last calendar day of its month to align with
+// the bond index data, which also use month‑end dates.
 
 let ipc = {};
 
 // Monthly CPI percentages by year (January through December).  For the most
-// recent year (2025) data are available only through June.  Additional
-// months can be appended as they become available.
+// recent year (2025) data are available only through June.
 const monthlyCPI = {
   2003: [102.40, 101.63, 101.05, 101.02, 100.80, 100.80, 100.71, 99.59, 100.34, 101.00, 100.96, 101.10],
   2004: [101.75, 100.99, 100.75, 100.99, 100.74, 100.78, 100.92, 100.42, 100.43, 101.14, 101.11, 101.14],
@@ -38,19 +36,23 @@ const monthlyCPI = {
   2025: [101.23, 100.81, 100.65, 100.40, 100.43, 100.20],
 };
 
-// Build the IPC series by computing the cumulative product of monthly CPI
-// percentages.  The series is normalised so that the first value (February 2003)
-// equals 1.0.  Each point corresponds to the 15th of the month.
+// Helper to compute the last day of a given month (1‑indexed)
+function getLastDay(year, month) {
+  return new Date(year, month, 0).getDate();
+}
+
+// Build the IPC series.  Normalise so that February 2003 is 1.0.
 ipc.x = [];
 ipc.y = [];
 let cumulative = 1.0;
-const startYear = 2003;
-const startMonth = 2; // skip January 2003
 let firstValue = null;
+const startYear = 2003;
+const startMonth = 2; // skip January 2003
 for (let year = startYear; year <= 2025; year++) {
   const yearCPI = monthlyCPI[year];
   for (let idx = 0; idx < yearCPI.length; idx++) {
     const monthNumber = idx + 1;
+    // skip months before the start
     if (year === startYear && monthNumber < startMonth) {
       continue;
     }
@@ -59,8 +61,9 @@ for (let year = startYear; year <= 2025; year++) {
       firstValue = cumulative;
     }
     const normalised = cumulative / firstValue;
+    const day = getLastDay(year, monthNumber);
     ipc.y.push(parseFloat(normalised.toFixed(10)));
-    ipc.x.push(`${year}-${String(monthNumber).padStart(2, '0')}-15`);
+    ipc.x.push(`${year}-${String(monthNumber).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
   }
 }
 
