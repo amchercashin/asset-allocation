@@ -65,6 +65,26 @@ process.stdin.on("end", () => {
 
 
 class IpcCompatibilityTests(unittest.TestCase):
+    def test_workflow_updates_validates_and_deploys_pages(self):
+        workflow_path = ROOT / ".github/workflows/pages.yml"
+        self.assertTrue(workflow_path.is_file())
+        workflow = workflow_path.read_text(encoding="utf-8")
+
+        for required in (
+            "schedule:",
+            "workflow_dispatch:",
+            "push:",
+            "contents: write",
+            "pages: write",
+            "id-token: write",
+            "python scripts/update_inflation.py",
+            "python -m unittest discover -s tests -v",
+            "actions/upload-pages-artifact",
+            "actions/deploy-pages",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, workflow)
+
     def test_page_explains_automatic_rosstat_updates(self):
         html = (ROOT / "index.html").read_text(encoding="utf-8")
 
