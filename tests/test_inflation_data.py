@@ -1,5 +1,15 @@
+import hashlib
+import json
+import ssl
+import subprocess
+import sys
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from io import BytesIO
+from io import StringIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from openpyxl import Workbook
 
@@ -8,6 +18,12 @@ from scripts.inflation_data import (
     discover_latest_workbook,
     merge_months,
     parse_workbook,
+)
+from scripts.update_inflation import (
+    create_rosstat_ssl_context,
+    fetch_url,
+    main,
+    update_files,
 )
 
 
@@ -42,6 +58,27 @@ def workbook_bytes(year_values):
     stream = BytesIO()
     workbook.save(stream)
     return stream.getvalue()
+
+
+class FakeResponse:
+    def __init__(self, content, final_url, content_length=None):
+        self._stream = BytesIO(content)
+        self._final_url = final_url
+        self.headers = {}
+        if content_length is not None:
+            self.headers["Content-Length"] = str(content_length)
+
+    def geturl(self):
+        return self._final_url
+
+    def read(self, size=-1):
+        return self._stream.read(size)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
 
 
 class DiscoverWorkbookTests(unittest.TestCase):
@@ -142,6 +179,175 @@ class MergeMonthsTests(unittest.TestCase):
 
         with self.assertRaisesRegex(InflationDataError, "not consecutive"):
             merge_months([], official)
+
+
+class UpdateFilesTests(unittest.TestCase):
+    def test_writes_canonical_json_and_compatible_javascript(self):
+        html = b'<a href="/storage/mediabank/ipc_mes_12-2003.xlsx">data</a>'
+        xlsx = workbook_bytes({2003: [100.0] * 12})
+        responses = {
+            "https://rosstat.gov.ru/statistics/price": html,
+            "https://rosstat.gov.ru/storage/mediabank/ipc_mes_12-2003.xlsx": xlsx,
+        }
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            changed = update_files(
+                root,
+                fetch=lambda url: responses[url],
+                retrieved_at="2026-06-30T12:00:00Z",
+            )
+
+            self.assertTrue((root / "data/inflation-monthly.json").is_file())
+            self.assertTrue((root / "ipc_data.js").is_file())
+            data = json.loads(
+                (root / "data/inflation-monthly.json").read_text(encoding="utf-8")
+            )
+            source = (root / "ipc_data.js").read_text(encoding="utf-8")
+            self.assertTrue(changed)
+            self.assertEqual(data["source"]["agency"], "Rosstat")
+            self.assertEqual(data["latest_period"], "2003-12")
+            self.assertIn('ipc.name = "ИПЦ";', source)
+
+    def test_does_not_rewrite_files_when_source_has_no_new_month(self):
+        html = b'<a href="/storage/mediabank/ipc_mes_12-2003.xlsx">data</a>'
+        xlsx = workbook_bytes({2003: [100.0] * 12})
+        responses = {
+            "https://rosstat.gov.ru/statistics/price": html,
+            "https://rosstat.gov.ru/storage/mediabank/ipc_mes_12-2003.xlsx": xlsx,
+        }
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            fetch = lambda url: responses[url]
+            update_files(root, fetch=fetch, retrieved_at="2026-06-30T12:00:00Z")
+            data_before = (root / "data/inflation-monthly.json").read_bytes()
+            js_before = (root / "ipc_data.js").read_bytes()
+
+            changed = update_files(
+                root,
+                fetch=fetch,
+                retrieved_at="2026-07-01T12:00:00Z",
+            )
+
+            self.assertFalse(changed)
+            self.assertEqual(
+                (root / "data/inflation-monthly.json").read_bytes(), data_before
+            )
+            self.assertEqual((root / "ipc_data.js").read_bytes(), js_before)
+
+
+class FetchUrlTests(unittest.TestCase):
+    def test_bundled_sub_ca_has_expected_fingerprint(self):
+        ca_path = (
+            Path(__file__).resolve().parents[1]
+            / "certs/russian-trusted-sub-ca-2024.pem"
+        )
+
+        self.assertTrue(ca_path.is_file())
+        pem = ca_path.read_text(encoding="ascii")
+        der = ssl.PEM_cert_to_DER_cert(pem)
+
+        self.assertEqual(
+            hashlib.sha256(der).hexdigest(),
+            "2155785036c900dbb5f1bb2a1569c80c55595bd6bf94867a29bbddbc7d88a3f2",
+        )
+
+    def test_default_download_uses_bundled_verifying_context(self):
+        response = FakeResponse(
+            b"data", "https://rosstat.gov.ru/storage/data.xlsx", content_length=4
+        )
+
+        with patch(
+            "scripts.update_inflation.urlopen", return_value=response
+        ) as default_opener:
+            content = fetch_url("https://rosstat.gov.ru/storage/data.xlsx")
+
+        context = default_opener.call_args.kwargs.get("context")
+        self.assertEqual(content, b"data")
+        self.assertIsInstance(context, ssl.SSLContext)
+        self.assertTrue(context.verify_mode == ssl.CERT_REQUIRED)
+        self.assertTrue(context.check_hostname)
+        self.assertTrue(context.verify_flags & ssl.VERIFY_X509_PARTIAL_CHAIN)
+
+    def test_context_factory_requires_bundled_ca(self):
+        context = create_rosstat_ssl_context()
+
+        self.assertIsInstance(context, ssl.SSLContext)
+        self.assertTrue(context.verify_flags & ssl.VERIFY_X509_PARTIAL_CHAIN)
+
+    def test_reads_small_https_response_from_rosstat(self):
+        response = FakeResponse(
+            b"data", "https://rosstat.gov.ru/storage/data.xlsx", content_length=4
+        )
+
+        content = fetch_url(
+            "https://rosstat.gov.ru/storage/data.xlsx",
+            max_bytes=4,
+            opener=lambda request, timeout: response,
+        )
+
+        self.assertEqual(content, b"data")
+
+    def test_rejects_redirect_to_foreign_host(self):
+        response = FakeResponse(b"data", "https://example.com/data.xlsx")
+
+        with self.assertRaisesRegex(InflationDataError, "unexpected host"):
+            fetch_url(
+                "https://rosstat.gov.ru/storage/data.xlsx",
+                opener=lambda request, timeout: response,
+            )
+
+    def test_rejects_response_larger_than_limit(self):
+        response = FakeResponse(
+            b"12345", "https://rosstat.gov.ru/storage/data.xlsx", content_length=5
+        )
+
+        with self.assertRaisesRegex(InflationDataError, "size limit"):
+            fetch_url(
+                "https://rosstat.gov.ru/storage/data.xlsx",
+                max_bytes=4,
+                opener=lambda request, timeout: response,
+            )
+
+
+class CommandLineTests(unittest.TestCase):
+    def test_supports_documented_direct_script_invocation(self):
+        root = Path(__file__).resolve().parents[1]
+
+        result = subprocess.run(
+            [sys.executable, "scripts/update_inflation.py", "--help"],
+            cwd=root,
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Update the static Russian CPI series", result.stdout)
+
+    def test_reports_successful_update(self):
+        output = StringIO()
+        with TemporaryDirectory() as directory, patch(
+            "scripts.update_inflation.update_files", return_value=True
+        ) as updater, redirect_stdout(output):
+            exit_code = main(["--root", directory])
+
+        self.assertEqual(exit_code, 0)
+        updater.assert_called_once()
+        self.assertIn("updated", output.getvalue().lower())
+
+    def test_reports_source_error_without_traceback(self):
+        output = StringIO()
+        with patch(
+            "scripts.update_inflation.update_files",
+            side_effect=InflationDataError("broken source"),
+        ), redirect_stderr(output):
+            exit_code = main([])
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("broken source", output.getvalue())
+        self.assertNotIn("Traceback", output.getvalue())
 
 
 if __name__ == "__main__":

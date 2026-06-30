@@ -1,3 +1,7 @@
 # Custom
 
 notes
+
+# Python
+__pycache__/
+*.py[cod]
