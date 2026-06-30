@@ -182,6 +182,26 @@ class MergeMonthsTests(unittest.TestCase):
 
 
 class UpdateFilesTests(unittest.TestCase):
+    def test_does_not_write_any_file_when_rendering_fails(self):
+        html = b'<a href="/storage/mediabank/ipc_mes_12-2003.xlsx">data</a>'
+        xlsx = workbook_bytes({2003: [100.0] * 12})
+        responses = {
+            "https://rosstat.gov.ru/statistics/price": html,
+            "https://rosstat.gov.ru/storage/mediabank/ipc_mes_12-2003.xlsx": xlsx,
+        }
+
+        with TemporaryDirectory() as directory, patch(
+            "scripts.update_inflation.render_ipc_js",
+            side_effect=InflationDataError("render failed"),
+        ):
+            root = Path(directory)
+
+            with self.assertRaisesRegex(InflationDataError, "render failed"):
+                update_files(root, fetch=lambda url: responses[url])
+
+            self.assertFalse((root / "data/inflation-monthly.json").exists())
+            self.assertFalse((root / "ipc_data.js").exists())
+
     def test_writes_canonical_json_and_compatible_javascript(self):
         html = b'<a href="/storage/mediabank/ipc_mes_12-2003.xlsx">data</a>'
         xlsx = workbook_bytes({2003: [100.0] * 12})

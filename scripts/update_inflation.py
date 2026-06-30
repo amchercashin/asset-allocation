@@ -130,11 +130,11 @@ def update_files(
         "months": months,
     }
 
-    _atomic_write(
-        data_path,
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-    )
-    _atomic_write(js_path, render_ipc_js(months))
+    data_content = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+    js_content = render_ipc_js(months)
+
+    _atomic_write(data_path, data_content)
+    _atomic_write(js_path, js_content)
     return True
 
 
