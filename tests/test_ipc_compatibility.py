@@ -65,6 +65,13 @@ process.stdin.on("end", () => {
 
 
 class IpcCompatibilityTests(unittest.TestCase):
+    def test_page_explains_automatic_rosstat_updates(self):
+        html = (ROOT / "index.html").read_text(encoding="utf-8")
+
+        self.assertIn("https://rosstat.gov.ru/statistics/price", html)
+        self.assertIn("обновляется автоматически", html)
+        self.assertNotIn("не обновляется автоматически", html)
+
     def test_renders_existing_plotly_trace_interface(self):
         source = render_ipc_js(current_month_records())
 
