@@ -6,6 +6,7 @@ from openpyxl import Workbook
 from scripts.inflation_data import (
     InflationDataError,
     discover_latest_workbook,
+    merge_months,
     parse_workbook,
 )
 
@@ -92,6 +93,55 @@ class ParseWorkbookTests(unittest.TestCase):
 
         with self.assertRaisesRegex(InflationDataError, "outside 80..120"):
             parse_workbook(workbook_bytes({2003: values}))
+
+
+class MergeMonthsTests(unittest.TestCase):
+    def test_appends_only_new_consecutive_months(self):
+        existing = [
+            {"period": "2025-05", "index_to_previous_month": 100.43},
+            {"period": "2025-06", "index_to_previous_month": 100.20},
+        ]
+        official = existing + [
+            {"period": "2025-07", "index_to_previous_month": 100.57}
+        ]
+
+        merged, changed = merge_months(existing, official)
+
+        self.assertTrue(changed)
+        self.assertEqual(merged, official)
+
+    def test_is_idempotent_without_new_months(self):
+        rows = [{"period": "2025-06", "index_to_previous_month": 100.20}]
+
+        merged, changed = merge_months(rows, list(rows))
+
+        self.assertFalse(changed)
+        self.assertEqual(merged, rows)
+
+    def test_rejects_historical_revision(self):
+        existing = [{"period": "2025-06", "index_to_previous_month": 100.20}]
+        revised = [{"period": "2025-06", "index_to_previous_month": 100.21}]
+
+        with self.assertRaisesRegex(InflationDataError, "historical value changed"):
+            merge_months(existing, revised)
+
+    def test_rejects_official_series_older_than_local(self):
+        existing = [
+            {"period": "2025-06", "index_to_previous_month": 100.20},
+            {"period": "2025-07", "index_to_previous_month": 100.57},
+        ]
+
+        with self.assertRaisesRegex(InflationDataError, "older than local"):
+            merge_months(existing, existing[:1])
+
+    def test_rejects_missing_month(self):
+        official = [
+            {"period": "2025-06", "index_to_previous_month": 100.20},
+            {"period": "2025-08", "index_to_previous_month": 99.60},
+        ]
+
+        with self.assertRaisesRegex(InflationDataError, "not consecutive"):
+            merge_months([], official)
 
 
 if __name__ == "__main__":

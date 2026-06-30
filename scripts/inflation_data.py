@@ -108,6 +108,75 @@ def parse_workbook(content: bytes) -> list[dict]:
         workbook.close()
 
 
+def merge_months(
+    existing: list[dict], official: list[dict]
+) -> tuple[list[dict], bool]:
+    validate_sequence(official)
+    if not existing:
+        return list(official), bool(official)
+
+    validate_sequence(existing)
+    if len(official) < len(existing):
+        raise InflationDataError(
+            "Official Rosstat series is older than local inflation data"
+        )
+
+    for local_row, official_row in zip(existing, official):
+        if local_row["period"] != official_row["period"]:
+            raise InflationDataError(
+                "Official Rosstat historical period changed: "
+                f"{local_row['period']} != {official_row['period']}"
+            )
+        local_value = round(float(local_row["index_to_previous_month"]), 2)
+        official_value = round(float(official_row["index_to_previous_month"]), 2)
+        if local_value != official_value:
+            raise InflationDataError(
+                "Official Rosstat historical value changed for "
+                f"{local_row['period']}: {local_value} != {official_value}"
+            )
+
+    if len(official) == len(existing):
+        return existing, False
+    return list(official), True
+
+
+def next_period(period: str) -> str:
+    match = re.fullmatch(r"(\d{4})-(\d{2})", period)
+    if not match:
+        raise InflationDataError(f"Invalid monthly period: {period!r}")
+    year, month = map(int, match.groups())
+    if not 1 <= month <= 12:
+        raise InflationDataError(f"Invalid monthly period: {period!r}")
+    if month == 12:
+        return f"{year + 1:04d}-01"
+    return f"{year:04d}-{month + 1:02d}"
+
+
+def validate_sequence(rows: list[dict]) -> None:
+    previous = None
+    for row in rows:
+        if not isinstance(row, dict):
+            raise InflationDataError("Monthly CPI record must be an object")
+        period = row.get("period")
+        if not isinstance(period, str):
+            raise InflationDataError("Monthly CPI period must be a string")
+        next_period(period)
+
+        value = row.get("index_to_previous_month")
+        if isinstance(value, bool) or not isinstance(value, Real):
+            raise InflationDataError(f"Monthly CPI value for {period} is not numeric")
+        if not 80 <= float(value) <= 120:
+            raise InflationDataError(
+                f"Monthly CPI value for {period} is outside 80..120: {value}"
+            )
+
+        if previous is not None and period != next_period(previous):
+            raise InflationDataError(
+                f"Monthly CPI sequence is not consecutive: {previous}, {period}"
+            )
+        previous = period
+
+
 def _find_year_columns(rows: list[tuple]) -> dict[int, int]:
     best = {}
     for row in rows:
