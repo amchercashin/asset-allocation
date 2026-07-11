@@ -72,6 +72,7 @@ class IpcCompatibilityTests(unittest.TestCase):
 
         for required in (
             "schedule:",
+            '- cron: "17 4 * * *"',
             "workflow_dispatch:",
             "push:",
             "contents: write",

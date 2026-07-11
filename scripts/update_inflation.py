@@ -3,7 +3,7 @@ import hashlib
 import json
 import ssl
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Callable
 from urllib.error import HTTPError, URLError
@@ -95,10 +95,25 @@ def _require_rosstat_https(url: str) -> None:
         raise InflationDataError(f"Rosstat download used unexpected host: {url}")
 
 
+def validate_source_freshness(latest_period: str, current_date: date) -> None:
+    months_behind = 1 if current_date.day >= 20 else 2
+    current_month = current_date.year * 12 + current_date.month - 1
+    expected_month = current_month - months_behind
+    expected_period = f"{expected_month // 12:04d}-{expected_month % 12 + 1:02d}"
+
+    if latest_period < expected_period:
+        raise InflationDataError(
+            "Rosstat source is stale: "
+            f"latest period is {latest_period}, expected at least {expected_period} "
+            f"by {current_date.isoformat()}"
+        )
+
+
 def update_files(
     root: Path,
     fetch: Callable[[str], bytes] = fetch_url,
     retrieved_at: str | None = None,
+    current_date: date | None = None,
 ) -> bool:
     data_path = root / "data/inflation-monthly.json"
     js_path = root / "ipc_data.js"
@@ -110,6 +125,10 @@ def update_files(
     workbook_url = discover_latest_workbook(landing_html)
     workbook_content = fetch(workbook_url)
     official_months = parse_workbook(workbook_content)
+    validate_source_freshness(
+        official_months[-1]["period"],
+        current_date or datetime.now(timezone.utc).date(),
+    )
     months, changed = merge_months(existing.get("months", []), official_months)
     if not changed:
         return False

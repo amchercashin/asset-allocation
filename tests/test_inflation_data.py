@@ -5,6 +5,7 @@ import subprocess
 import sys
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
+from datetime import date
 from io import BytesIO
 from io import StringIO
 from pathlib import Path
@@ -24,6 +25,7 @@ from scripts.update_inflation import (
     fetch_url,
     main,
     update_files,
+    validate_source_freshness,
 )
 
 
@@ -181,6 +183,18 @@ class MergeMonthsTests(unittest.TestCase):
             merge_months([], official)
 
 
+class SourceFreshnessTests(unittest.TestCase):
+    def test_accepts_two_month_lag_before_cutoff(self):
+        validate_source_freshness("2026-05", date(2026, 7, 19))
+
+    def test_requires_previous_month_from_cutoff(self):
+        with self.assertRaisesRegex(InflationDataError, "source is stale"):
+            validate_source_freshness("2026-05", date(2026, 7, 20))
+
+    def test_accepts_previous_month_from_cutoff(self):
+        validate_source_freshness("2026-06", date(2026, 7, 20))
+
+
 class UpdateFilesTests(unittest.TestCase):
     def test_does_not_write_any_file_when_rendering_fails(self):
         html = b'<a href="/storage/mediabank/ipc_mes_12-2003.xlsx">data</a>'
@@ -197,7 +211,11 @@ class UpdateFilesTests(unittest.TestCase):
             root = Path(directory)
 
             with self.assertRaisesRegex(InflationDataError, "render failed"):
-                update_files(root, fetch=lambda url: responses[url])
+                update_files(
+                    root,
+                    fetch=lambda url: responses[url],
+                    current_date=date(2004, 2, 19),
+                )
 
             self.assertFalse((root / "data/inflation-monthly.json").exists())
             self.assertFalse((root / "ipc_data.js").exists())
@@ -217,6 +235,7 @@ class UpdateFilesTests(unittest.TestCase):
                 root,
                 fetch=lambda url: responses[url],
                 retrieved_at="2026-06-30T12:00:00Z",
+                current_date=date(2004, 2, 19),
             )
 
             self.assertTrue((root / "data/inflation-monthly.json").is_file())
@@ -241,7 +260,12 @@ class UpdateFilesTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             root = Path(directory)
             fetch = lambda url: responses[url]
-            update_files(root, fetch=fetch, retrieved_at="2026-06-30T12:00:00Z")
+            update_files(
+                root,
+                fetch=fetch,
+                retrieved_at="2026-06-30T12:00:00Z",
+                current_date=date(2004, 2, 19),
+            )
             data_before = (root / "data/inflation-monthly.json").read_bytes()
             js_before = (root / "ipc_data.js").read_bytes()
 
@@ -249,6 +273,7 @@ class UpdateFilesTests(unittest.TestCase):
                 root,
                 fetch=fetch,
                 retrieved_at="2026-07-01T12:00:00Z",
+                current_date=date(2004, 2, 19),
             )
 
             self.assertFalse(changed)

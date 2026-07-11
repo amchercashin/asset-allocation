@@ -3,11 +3,11 @@
   "source": {
     "agency": "Rosstat",
     "landing_url": "https://rosstat.gov.ru/statistics/price",
-    "file_url": "https://rosstat.gov.ru/storage/mediabank/ipc_mes_05-2026.xlsx",
-    "retrieved_at": "2026-06-30T12:45:02Z",
-    "file_sha256": "89df7f6f28d1d3b818e6f7c0fee0b71483f05e952947da3c16451a457cb815c9"
+    "file_url": "https://rosstat.gov.ru/storage/mediabank/ipc_mes_06-2026.xlsx",
+    "retrieved_at": "2026-07-11T10:12:54Z",
+    "file_sha256": "f433952c024371917f9ba2178fd42029f54d539e6048c3bdbf3c908947c399a8"
   },
-  "latest_period": "2026-05",
+  "latest_period": "2026-06",
   "months": [
     {
       "period": "2003-02",
@@ -1128,6 +1128,10 @@
     {
       "period": "2026-05",
       "index_to_previous_month": 100.17
+    },
+    {
+      "period": "2026-06",
+      "index_to_previous_month": 100.87
     }
   ]
 }
