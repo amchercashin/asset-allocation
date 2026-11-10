@@ -283,6 +283,98 @@ class UpdateFilesTests(unittest.TestCase):
             self.assertEqual((root / "ipc_data.js").read_bytes(), js_before)
 
 
+class SourceOutageTests(unittest.TestCase):
+    LANDING = "https://rosstat.gov.ru/statistics/price"
+    CURRENT = "https://rosstat.gov.ru/storage/mediabank/ipc_mes_12-2003.xlsx"
+
+    def _seed(self, root):
+        responses = {
+            self.LANDING: f'<a href="{self.CURRENT}">data</a>'.encode(),
+            self.CURRENT: workbook_bytes({2003: [100.0] * 12}),
+        }
+        update_files(
+            root,
+            fetch=lambda url: responses[url],
+            retrieved_at="2026-06-30T12:00:00Z",
+            current_date=date(2004, 2, 19),
+        )
+        return (
+            (root / "data/inflation-monthly.json").read_bytes(),
+            (root / "ipc_data.js").read_bytes(),
+        )
+
+    def _broken_download(self, url):
+        if url == self.LANDING:
+            return f'<a href="{self.CURRENT}">data</a>'.encode()
+        raise InflationDataError(f"Could not download {url}: HTTP Error 404")
+
+    def test_keeps_fresh_data_when_workbook_download_fails(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            before = self._seed(root)
+            output = StringIO()
+
+            with redirect_stdout(output):
+                changed = update_files(
+                    root,
+                    fetch=self._broken_download,
+                    current_date=date(2004, 2, 19),
+                )
+
+            self.assertFalse(changed)
+            self.assertIn("::warning", output.getvalue())
+            self.assertEqual(
+                (
+                    (root / "data/inflation-monthly.json").read_bytes(),
+                    (root / "ipc_data.js").read_bytes(),
+                ),
+                before,
+            )
+
+    def test_skips_workbook_older_than_committed_data(self):
+        rolled_back = "https://rosstat.gov.ru/storage/mediabank/ipc_mes_02-2003.xlsx"
+        requested = []
+
+        def fetch(url):
+            requested.append(url)
+            if url == self.LANDING:
+                return f'<a href="{rolled_back}">data</a>'.encode()
+            raise AssertionError(f"unexpected download of {url}")
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._seed(root)
+
+            with redirect_stdout(StringIO()):
+                changed = update_files(
+                    root, fetch=fetch, current_date=date(2004, 2, 19)
+                )
+
+            self.assertFalse(changed)
+            self.assertEqual(requested, [self.LANDING])
+
+    def test_fails_when_download_fails_and_committed_data_is_stale(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._seed(root)
+
+            with self.assertRaisesRegex(InflationDataError, "404"):
+                update_files(
+                    root,
+                    fetch=self._broken_download,
+                    current_date=date(2004, 3, 20),
+                )
+
+    def test_fails_without_committed_data(self):
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(InflationDataError, "404"):
+                update_files(
+                    Path(directory),
+                    fetch=self._broken_download,
+                    current_date=date(2004, 2, 19),
+                )
+
+
 class FetchUrlTests(unittest.TestCase):
     def test_bundled_sub_ca_has_expected_fingerprint(self):
         ca_path = (

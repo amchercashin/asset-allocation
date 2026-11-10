@@ -21,6 +21,7 @@ from scripts.inflation_data import (
     merge_months,
     parse_workbook,
     render_ipc_js,
+    workbook_period,
 )
 
 ROSSTAT_CA_PATH = (
@@ -121,14 +122,30 @@ def update_files(
     if data_path.exists():
         existing = json.loads(data_path.read_text(encoding="utf-8"))
 
-    landing_html = fetch(LANDING_URL)
-    workbook_url = discover_latest_workbook(landing_html)
-    workbook_content = fetch(workbook_url)
-    official_months = parse_workbook(workbook_content)
-    validate_source_freshness(
-        official_months[-1]["period"],
-        current_date or datetime.now(timezone.utc).date(),
-    )
+    today = current_date or datetime.now(timezone.utc).date()
+    existing_period = existing.get("latest_period")
+
+    try:
+        landing_html = fetch(LANDING_URL)
+        workbook_url = discover_latest_workbook(landing_html)
+        linked_period = workbook_period(workbook_url)
+        if existing_period and linked_period < existing_period:
+            raise InflationDataError(
+                f"Rosstat page links workbook for {linked_period}, older than "
+                f"committed data through {existing_period} (page rolled back?)"
+            )
+        workbook_content = fetch(workbook_url)
+        official_months = parse_workbook(workbook_content)
+        validate_source_freshness(official_months[-1]["period"], today)
+    except InflationDataError as error:
+        if not _committed_data_is_fresh(existing_period, today):
+            raise
+        print(
+            "::warning title=Rosstat source unavailable::"
+            f"Keeping committed CPI data through {existing_period}: {error}"
+        )
+        return False
+
     months, changed = merge_months(existing.get("months", []), official_months)
     if not changed:
         return False
@@ -157,6 +174,16 @@ def update_files(
     return True
 
 
+def _committed_data_is_fresh(latest_period: str | None, today: date) -> bool:
+    if not latest_period:
+        return False
+    try:
+        validate_source_freshness(latest_period, today)
+    except InflationDataError:
+        return False
+    return True
+
+
 def _atomic_write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".tmp")
@@ -182,7 +209,7 @@ def main(argv=None) -> int:
         print(f"Inflation update failed: {error}", file=sys.stderr)
         return 1
 
-    status = "updated" if changed else "already current"
+    status = "updated" if changed else "unchanged"
     print(f"Inflation data {status}.")
     return 0
 

@@ -52,6 +52,14 @@ def discover_latest_workbook(html: bytes) -> str:
     return max(candidates)[1]
 
 
+def workbook_period(url: str) -> str:
+    match = WORKBOOK_RE.search(urlparse(url).path)
+    if not match:
+        raise InflationDataError(f"Cannot read period from workbook URL: {url}")
+    month, year = map(int, match.groups())
+    return f"{year:04d}-{month:02d}"
+
+
 def parse_workbook(content: bytes) -> list[dict]:
     try:
         workbook = load_workbook(BytesIO(content), read_only=True, data_only=True)
